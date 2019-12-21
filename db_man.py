@@ -1,20 +1,18 @@
-import json
-
+# -*- coding: utf-8 -*-
 import requests
-from django.http import HttpResponse
-from django.shortcuts import render
-
-# Create your views here.
 import os
 import pdfplumber
-from django.views.generic.base import View
 from lxml import etree
 
+import dbtools
 from industry_parser.cleaning.utils import special_handling, match_industryCateName, data_pack_insert, match_cateName
 
 url = 'http://www.csrc.gov.cn/pub/newsite/scb/ssgshyfljg/'
 root_path = os.path.abspath(os.path.dirname(__file__)).split('china_industry_parser')[0]
 pdf_path = str(root_path) + 'china_industry_parser\industry_parser\cleaning\images'
+
+
+
 
 
 def get_local_industry_pdf_list():
@@ -146,16 +144,28 @@ def parser_second(new_text_list):
     return out_put_box
 
 
+def gen_industry_box(table_box):
+    industry_value_box = []
+    for info in table_box:
+        industry_values = """("{industry}", "{security_code}", "{company_name}")""".format(
+            industry=info[0],
+            security_code=info[3],
+            company_name=info[4]
+        )
+        industry_value_box.append(industry_values)
+    return industry_value_box
 
-def drop_pdf_file(new_pdf_title_name):
-    if os.path.exists(pdf_path + new_pdf_title_name):
-        os.remove(pdf_path + new_pdf_title_name)
-    else:
-        print('文件不存在')
+
+def to_insert_table(out_put_box):
+    value_box = gen_industry_box(out_put_box)
+    industry_insert_sql = """INSERT INTO industry (industry, security_code, company_name) VALUES {values}"""
+    industry_insert_sql = industry_insert_sql.format(values=', '.join(value_box))
+    print(industry_insert_sql)
+    dbtools.query_industry(industry_insert_sql)
 
 
-# 数据接口
-def get_industry_dict():
+
+if __name__ == '__main__':
     # 获取文件标题与链接
     title, link = get_industry_pdf_title_link()
 
@@ -169,29 +179,4 @@ def get_industry_dict():
     # 解析pdf生成结构化数据
     list = parser_first(new_pdf_title_name)
     out_put_box = parser_second(list)
-
-    # 封装数据到字典
-    new_dict = pack_data_to_dict(out_put_box)
-
-    # 删除文件
-    drop_pdf_file(new_pdf_title_name)
-
-    # 返回数据
-    return new_dict
-
-class ParseView(View):
-    def get(self, request):
-        return render(request, 'industry_parser/detail.html')
-    def post(self, request):
-        data = get_industry_dict()
-        result = {'status': '200', 'data': data}
-        return HttpResponse(json.dumps(result, ensure_ascii=False), content_type='application/json, charset=utf-8')
-
-
-# def parse(request):
-#     if request.method == 'GET':
-#         return render(request, 'industry_parser/detail.html')
-#     elif request.method == 'POST':
-#         data = get_industry_dict()
-#         result = {'status': '200', 'data': data}
-#         return HttpResponse(json.dumps(result, ensure_ascii=False), content_type='application/json, charset=utf-8')
+    to_insert_table(out_put_box)

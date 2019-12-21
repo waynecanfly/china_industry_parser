@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+</head>
+<body>
+<div id="result"></div>
+<button>开始解析中国行业信息</button>
+</body>
+<script>
+    $(document).ready(function () {
+            $.ajax({
+            url: '',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function (data) {
+                console.log(data)
+            }
+        })
+    });
+</script>
+</html>

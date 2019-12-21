@@ -19,5 +19,5 @@ from . import views
 
 
 urlpatterns = [
-    path('parse/', views.parser, name='parser'),
+    path('parse/', views.ParseView.as_view(), name='parse'),
 ]
