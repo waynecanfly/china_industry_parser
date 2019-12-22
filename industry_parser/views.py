@@ -9,8 +9,12 @@ import os
 import pdfplumber
 from django.views.generic.base import View
 from lxml import etree
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from industry_parser.cleaning.utils import special_handling, match_industryCateName, data_pack_insert, match_cateName
+from industry_parser.models import Industry, MyPageNumberPagination
+from industry_parser.serializers import IndustrySerializer
 
 url = 'http://www.csrc.gov.cn/pub/newsite/scb/ssgshyfljg/'
 root_path = os.path.abspath(os.path.dirname(__file__)).split('china_industry_parser')[0]
@@ -179,19 +183,25 @@ def get_industry_dict():
     # 返回数据
     return new_dict
 
-class ParseView(View):
-    def get(self, request):
-        return render(request, 'industry_parser/detail.html')
-    def post(self, request):
-        data = get_industry_dict()
-        result = {'status': '200', 'data': data}
-        return HttpResponse(json.dumps(result, ensure_ascii=False), content_type='application/json, charset=utf-8')
 
-
-# def parse(request):
-#     if request.method == 'GET':
+# restframe work需要继承APIView
+# class ParseView(APIView):
+#     def get(self, request):
 #         return render(request, 'industry_parser/detail.html')
-#     elif request.method == 'POST':
-#         data = get_industry_dict()
-#         result = {'status': '200', 'data': data}
-#         return HttpResponse(json.dumps(result, ensure_ascii=False), content_type='application/json, charset=utf-8')
+#     def post(self, request):
+#         industry = Industry.objects.all()
+#         serializer = IndustrySerializer(industry, many=True)
+#         return Response(serializer.data)
+
+class ParseView(APIView):
+    def get(self, request):
+        industry = Industry.objects.all()
+        page = MyPageNumberPagination()
+        page_roles = page.paginate_queryset(queryset=industry, request=request, view=self)
+        industry_ser = IndustrySerializer(instance=page_roles, many=True)
+        return page.get_paginated_response(industry_ser.data)
+    # def post(self, request):
+    #     industry = Industry.objects.all()
+    #     serializer = IndustrySerializer(industry, many=True)
+    #     return Response(serializer.data)
+
